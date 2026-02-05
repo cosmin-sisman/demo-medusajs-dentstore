@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cursor
+.cursor/
+
+# Environment files (secrets)
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+
+# Docker volumes (local data)
+pgdata/
+redisdata/
