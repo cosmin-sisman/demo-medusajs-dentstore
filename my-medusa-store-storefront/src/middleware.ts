@@ -104,6 +104,11 @@ async function getCountryCode(
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
+  // check if the url is a static asset early to avoid unnecessary backend calls
+  if (request.nextUrl.pathname.includes(".")) {
+    return NextResponse.next()
+  }
+
   let redirectUrl = request.nextUrl.href
 
   let response = NextResponse.redirect(redirectUrl, 307)
@@ -112,7 +117,25 @@ export async function middleware(request: NextRequest) {
 
   let cacheId = cacheIdCookie?.value || crypto.randomUUID()
 
-  const regionMap = await getRegionMap(cacheId)
+  let regionMap: Map<string, HttpTypes.StoreRegion> | null = null
+
+  try {
+    regionMap = await getRegionMap(cacheId)
+  } catch (error) {
+    console.error("Middleware: Failed to fetch regions from backend:", error)
+    // If the backend is unavailable, redirect to the default region
+    const urlCountryCode = request.nextUrl.pathname.split("/")[1]?.toLowerCase()
+    if (urlCountryCode && urlCountryCode.length === 2) {
+      return NextResponse.next()
+    }
+    const redirectPath =
+      request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
+    const queryString = request.nextUrl.search ? request.nextUrl.search : ""
+    return NextResponse.redirect(
+      `${request.nextUrl.origin}/${DEFAULT_REGION}${redirectPath}${queryString}`,
+      307
+    )
+  }
 
   const countryCode = regionMap && (await getCountryCode(request, regionMap))
 
@@ -131,11 +154,6 @@ export async function middleware(request: NextRequest) {
     })
 
     return response
-  }
-
-  // check if the url is a static asset
-  if (request.nextUrl.pathname.includes(".")) {
-    return NextResponse.next()
   }
 
   const redirectPath =
